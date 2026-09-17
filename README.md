@@ -124,3 +124,12 @@ reverb pr event aata hy toh woh usko aagay( bger mangay ) bhej deta hy kisi chan
  jab pusher kisi channel pr jurr jata hy, toh .bind() use krtay hein .
  pusher.bind('MessageSent', function(data) { ... }).
  Means Hey Pusher, jab bhi is channel par 'MessageSent' naam ka event aaye, toh yeh JavaScript function chala dena (jo message ko screen par dikhayega)
+
+
+
+### Event (message) file :
+constrcut : Jab hum controller se event(new MessageSent($message)) likhenge ya fire kreingy, toh yeh constructor call hoga
+broadcastOn : kis channel pr broadcast krna hy
+broadcastAs :  isk andar event ka custom naam hai jo frontend (Pusher.js) use karega -> .bind('message.sent', ...)
+broadcastWith : // is k andar  data frontend ko bheja jayega
+

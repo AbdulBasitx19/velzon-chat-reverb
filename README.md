@@ -105,3 +105,22 @@ This project is built for educational and portfolio purposes. The Velzon theme i
 
 Built with ❤️ using Laravel, Spatie Permission, Yajra DataTables, and clean MVC practices.
 
+
+
+### Chat system
+## Reverb :
+ aek server hy jispr ham real time communicate krtay hein
+## event : 
+jab controller msg server pr store krta hy toh controller sath main aek event genrate krta hy 
+## broadcast:
+reverb pr event aata hy toh woh usko aagay( bger mangay ) bhej deta hy kisi channel pr (push)
+## 1. public_channel :
+ yeh woh channel hy jaha pr har koi broadcasted data ko sun ry hotay hein 
+## 2. private_channel:
+ only authenticated user hee channel ko join kr k us channel pr aye broadcasted data ko sun skta hy  
+## pusher cdn :
+ browser reverb sy aye msg ko sunnay k liay push cdn use krta hy
+## .bind() method :
+ jab pusher kisi channel pr jurr jata hy, toh .bind() use krtay hein .
+ pusher.bind('MessageSent', function(data) { ... }).
+ Means Hey Pusher, jab bhi is channel par 'MessageSent' naam ka event aaye, toh yeh JavaScript function chala dena (jo message ko screen par dikhayega)

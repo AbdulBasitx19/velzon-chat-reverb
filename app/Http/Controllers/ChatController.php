@@ -38,4 +38,18 @@ class ChatController extends Controller
         ]);
     }
 
+    public function getMessages($userId)
+    {
+        $messages = Message::where(function($query) use ($userId)
+        {
+            $query->where('sender_id', auth()->id())->where('receiver_id', $userId);
+        })->orWhere(function($query) use ($userId){
+            $query->where('sender_id', $userId)->where('receiver_id', auth()->id());
+        })->with('sender') // Sender ki details bhi load karo
+        ->orderBy('created_at', 'asc') // Purane messages pehle
+        ->get();
+
+        return response()->json($messages);
+    }
+
 }

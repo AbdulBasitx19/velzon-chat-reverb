@@ -52,4 +52,9 @@ Route::middleware(['auth'])->group(function(){
     Route::post('/chat', [ChatController::class, 'store'])->name('chat.store');
     Route::get('/chat/{userId}/messages', [ChatController::class, 'getMessages'])->name('chat.messages');
 
+
+    Route::post('/chat/send-file', [ChatController::class, 'sendFile'])->name('chat.send-file');
+    Route::get('/chat/download/{attachmentId}', [ChatController::class, 'download'])->name('chat.download');
+    Route::delete('/chat/{messageId}', [ChatController::class, 'destroy'])->name('chat.destroy');
+    
 });

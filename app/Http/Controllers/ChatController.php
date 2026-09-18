@@ -29,7 +29,7 @@ class ChatController extends Controller
             'message' => $request['message'],
         ]);
 
-        event(new MessageSent($message));
+        event(new MessageSent($message)); // Event fire kiya 
 
         // ajax k liay response
         return response()->json([

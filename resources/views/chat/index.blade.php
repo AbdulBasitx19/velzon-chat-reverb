@@ -5,122 +5,138 @@
 @endsection
 
 @section('content')
-
-<div class="container-fluid">
-    <div class="row">
-        <!-- ================= LEFT SIDE: USERS SIDEBAR ================= -->
-        <div class="col-md-4 col-lg-3">
-            <!-- ✅ chat-main-card class add ki hai fixed height ke liye -->
-            <div class="card chat-main-card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0 text-white">Users</h5>
-                </div>
-                
-                <!-- ✅ user-list-container class add ki hai taake sirf yeh hissa scroll ho -->
-                <div class="card-body p-0 user-list-container">
-                    <div class="list-group list-group-flush">  
-                        @foreach($users as $user)
-                            <a href="javascript:void(0)"
-                                class="list-group-item list-group-item-action user-item"
-                                data-user-id="{{ $user->id }}"
-                                data-user-name="{{ $user->name}}">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-shrink-0">
-                                        <img src="https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&background=random&color=fff"
-                                        alt="{{ $user->name }}" 
-                                        class="rounded-circle"
-                                        width="40" height="40">
-                                    </div>
-                                    <div class="flex-grow-1 ms-3">
-                                        <h6 class="mb-0">{{ $user->name }}</h6>
-                                        <small class="text-muted">{{ $user->email}}</small>
-                                    </div>
-                                </div>
-                            </a>
-                        @endforeach
-                    </div>
-                </div>
+{{-- ✅ 1. Pure Flexbox Wrapper with mx-n4 mt-n4 to break out of Velzon page-content padding --}}
+<div class="chat-wrapper d-lg-flex gap-1 mx-n4 mt-n5 mb-n3 p-0" style="height: calc(100vh - 145px);">
+    {{-- ===== LEFT SIDEBAR (Users List) ===== --}}
+    <div class="chat-leftsidebar minimal-border" style="width: 320px; border-right: 1px solid #eff2f7; background: #fff;">
+        <div class="px-4 pt-4 mb-3">
+            <h5 class="mb-4">Chats</h5>
+            {{-- ✅ 6. Search box added as requested --}}
+            <div class="search-box">
+                <input type="text" id="user-search" class="form-control bg-light border-light" placeholder="Search users...">
+                <i class="ri-search-2-line search-icon"></i>
             </div>
         </div>
 
-        <!-- ================= RIGHT SIDE: CHAT WINDOW ================= -->
-        <div class="col-md-8 col-lg-9"> 
-            <!-- ✅ chat-main-card class add ki hai taake left aur right barabar hon -->
-            <div class="card chat-main-card">
-                
-                <!-- 1. Chat Header (Fixed) -->
-                <div class="card-header bg-primary text-white"> 
-                    <h5 class="card-title mb-0 text-white" id="chat-with-user">Select a user to start chatting</h5>
-                </div>
-                
-                <!-- 2. Chat Messages (Scrollable) -->
-                <!-- ✅ chat-messages-container class add ki hai -->
-                <div class="card-body p-0 chat-messages-container" id="chat-messages"> 
-                    <div class="text-center text-muted d-flex align-items-center justify-content-center h-100" id="no-chat-selected">
-                        <div>
-                            <i class="ri-chat-3-line" style="font-size: 3rem"></i>
-                            <p class="mt-3">Select a user to Start Chatting</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 3. Chat Footer / Input (Fixed) -->
-                <div class="card-footer bg-white"> 
-                    <form id="message-form" style="display: none">
-                        <input type="hidden" id="receiver-id" value=""> 
-                        <div class="input-group">
-                            <!-- ✅ 'form-controll' ki spelling 'form-control' theek kar di hai -->
-                            <input type="text"
-                                id="message-input" 
-                                class="form-control" 
-                                placeholder="Type your message ..."
-                                autocomplete="off">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="ri-send-plane-2-line"></i> Send
-                            </button>
-                        </div>
-                    </form>
-                </div>
+        <div class="chat-room-list pt-3" style="flex-grow: 1; overflow-y: auto;">
+            <div class="px-4 mb-2">
+                <h4 class="mb-0 fs-11 text-muted text-uppercase">Direct Messages</h4>
             </div>
-         </div>
+            <ul class="list-unstyled chat-list chat-user-list" id="userList">
+                @foreach($users as $user)
+                <li class="user-item" 
+                    data-user-id="{{ $user->id }}"
+                    data-user-name="{{ $user->name}}">
+                    <a href="javascript:void(0)" class="d-flex align-items-center p-3">
+                        <div class="flex-shrink-0 me-3">
+                            <img src="https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&background=random&color=fff"
+                            alt="{{ $user->name }}" 
+                            class="rounded-circle"
+                            width="40" height="40">
+                        </div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <p class="text-truncate mb-0 fw-medium">{{ $user->name }}</p>
+                            <small class="text-muted" style="font-size: 11px;">{{ $user->email}}</small>
+                        </div>
+                    </a>
+                </li>
+                @endforeach
+            </ul>
+        </div>
+    </div>
+
+    {{-- ===== RIGHT SIDE: CHAT WINDOW ===== --}}
+    <div class="user-chat w-100 overflow-hidden minimal-border d-flex flex-column" style="background: #fff;">
+        
+        {{-- Empty state (Visible by default) --}}
+        <div id="no-chat-selected" class="d-flex align-items-center justify-content-center h-100">
+            <div class="text-center text-muted p-5">
+                <i class="ri-chat-3-line fs-1 d-block mb-3"></i>
+                <p class="mt-3">Select a user to Start Chatting</p>
+            </div>
+        </div>
+
+        {{-- ✅ 4. Chat Content Area (Hidden initially with d-none, toggled to d-flex) --}}
+        <div id="chat-content-area" class="d-none flex-column h-100">
+            
+            {{-- Chat Header --}}
+            <div class="p-3 user-chat-topbar border-bottom" style="background: #fff;"> 
+                <h5 class="card-title mb-0 text-dark" id="chat-with-user">Select a user to start chatting</h5>
+            </div>
+            
+            {{-- Chat Messages (Scrollable) --}}
+            <div class="chat-conversation p-3 p-lg-4 flex-grow-1 overflow-auto" id="chat-messages" style="background: #f8f9fa;"> 
+                <!-- Messages will be appended here -->
+            </div>
+            
+            {{-- Chat Footer / Input --}}
+            <div class="chat-input-section p-3 border-top bg-white"> 
+                <form id="message-form" class="d-flex align-items-center gap-2">
+                    <input type="hidden" id="receiver-id" value=""> 
+                    <input type="text"
+                        id="message-input" 
+                        class="form-control bg-light border-light" 
+                        placeholder="Type your message ..."
+                        autocomplete="off">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-send-plane-2-line"></i> Send
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 @endsection
 
 @section('page-css')
 <style>
-/* 1. Dono Cards (Sidebar aur Chat) ko ek fixed height do */
-.chat-main-card {
-    height: calc(100vh - 200px); /* Screen ki height minus header/footer */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Card ke bahar kuch show na ho */
+/* ✅ 1 & 2. Professional Chat Layout Fix (Flexbox) */
+.chat-wrapper {
+    display: flex !important;
+    flex-direction: row !important;
+    background: #fdfdfd;
+    border: 1px solid #f5f5f5;
+    border-radius: 4px;
 }
 
-/* 2. Left Side: Users list ko scrollable banayein */
-.user-list-container {
-    overflow-y: auto;
-    flex-grow: 1;
+.chat-leftsidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    width: 320px !important;
+    flex-shrink: 0 !important;
 }
 
-/* 3. Right Side: Messages area ko scrollable banayein */
-.chat-messages-container {
-    overflow-y: auto;
-    flex-grow: 1;
+.chat-room-list {
+    flex-grow: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
 }
 
-/* Custom Scrollbar (Optional: Thora clean dikhne ke liye) */
-.user-list-container::-webkit-scrollbar,
-.chat-messages-container::-webkit-scrollbar {
-    width: 6px;
-}
-.user-list-container::-webkit-scrollbar-thumb,
-.chat-messages-container::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1;
-    border-radius: 3px;
+.user-chat {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    flex-grow: 1 !important;
 }
 
-/* Existing Styles */
+.user-chat-topbar, .chat-input-section {
+    flex-shrink: 0 !important; 
+}
+
+.chat-conversation {
+    flex-grow: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* Custom Scrollbar */
+.chat-room-list::-webkit-scrollbar, .chat-conversation::-webkit-scrollbar { width: 6px; }
+.chat-room-list::-webkit-scrollbar-thumb, .chat-conversation::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
+
+/* Existing Styles (Preserved) */
 .user-item {
     transition: all 0.3s;
 }
@@ -131,11 +147,27 @@
     background-color: #e7f3ff;
     border-left: 3px solid #0d6efd;
 }
-.own-message .rounded {
-    border-bottom-right-radius: 0 !important;
+
+/* ✅ 3. Bulletproof renderMessage styling (left/right bubbles) */
+.chat-list.right {
+    text-align: right !important;
 }
-.other-message .rounded {
-    border-bottom-left-radius: 0 !important;
+.chat-list.right .conversation-list {
+    display: inline-flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    width:100%
+}
+.chat-list.left .conversation-list {
+    display: inline-flex !important;
+    width:100%
+}
+.chat-list .user-chat-content {
+    max-width: 75% !important;
+    text-align: left !important; /* Bubble ke andar text hamesha left-aligned rahe */
+}
+#chat-messages li {
+    list-style: none !important;
 }
 </style>
 @endsection
@@ -160,7 +192,8 @@
             enabledTransports: ['ws', 'wss'],                // Allowed protocols
             cluster: 'mt1',                                  // Reverb ke liye dummy cluster kaafi hai // Pusher.com k liay :server ki location, but reverb k liay mandatory so mt1 US east
             // Authentication endpoint for private channels ... Pusher.subscribe likhnay pr yeh hit hoga
-            authEndpoint: '/broadcasting/auth',              // Private channel authorization endpoint
+            // ✅ 5. Fixed Auth Endpoint to point to current HTTP server, not Reverb port
+            authEndpoint: window.location.origin + '/broadcasting/auth', 
             auth: {
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'     // Laravel security token
@@ -168,7 +201,31 @@
             }
         });
 
-       
+        // ✅ 3. Adopted renderMessage function for professional left/right bubbles
+        function renderMessage(msg) {
+            let isOwnMessage = msg.sender_id == currentUserId;
+            let senderName = isOwnMessage ? 'You' : (msg.sender_name || 'Unknown');
+            let bgColor = isOwnMessage ? 'bg-primary text-white' : 'bg-light text-dark';
+
+            return `
+                <li class="chat-list ${isOwnMessage ? 'right' : 'left'} mb-3">
+                    <div class="conversation-list">
+                        ${!isOwnMessage ? `<div class="chat-avatar me-2 align-self-end"><img src="https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=random&color=fff" class="rounded-circle avatar-xs" alt=""></div>` : ''}
+                        <div class="user-chat-content">
+                            <div class="ctext-wrap">
+                                <div class="ctext-wrap-content px-3 py-2 ${bgColor}" style="border-radius:12px; max-width:420px; word-break:break-word;">
+                                    ${!isOwnMessage ? `<small class="fw-bold d-block mb-1">${senderName}</small>` : ''}
+                                    <p class="mb-0 ctext-content">${msg.message}</p>
+                                    <div class="d-flex align-items-center justify-content-end gap-1 mt-1">
+                                        <small class="opacity-75" style="font-size:10px;">${new Date(msg.created_at).toLocaleTimeString()}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            `;
+        }
 
         //User Selection
         $('.user-item').on('click', function(){
@@ -179,9 +236,9 @@
             $('#chat-with-user').text('Chat With '+ selectedUserName);
             $('#receiver-id').val(selectedUserId);
             
-            //Input Message form with send button
-            $('#message-form').show();
-            $('#no-no-chat-selected').hide();
+            // ✅ 4. Toggling d-none and d-flex classes instead of .hide()/.show()
+            $('#no-chat-selected').addClass('d-none');
+            $('#chat-content-area').removeClass('d-none').addClass('d-flex');
 
             //Load Previous messages
             loadMessages(selectedUserId);
@@ -192,6 +249,9 @@
             //Highlights Selected User
             $('.user-item').removeClass('active');
             $(this).addClass('active');
+            
+            // Focus input
+            $('#message-input').focus();
         })
 
         // 3. LOAD PREVIOUS MESSAGES (AJAX)
@@ -205,10 +265,11 @@
                     $('#chat-messages').empty();
                     if(messages.length === 0)
                     {
-                        $('#chat-messages').html('<div class="text-center text-muted"><p>No messages yet. Start the conversation!</p></div>');
+                        $('#chat-messages').html('<li class="text-center text-muted py-4"><small>No messages yet. Start the conversation!</small></li>');
                     } else {
                         messages.forEach(function(msg){
-                            appendMessage(msg);
+                            // Using the adopted renderMessage function
+                            $('#chat-messages').append(renderMessage(msg));
                         })
                     }
                     scrollToBottom();
@@ -250,6 +311,7 @@
         });
 
         //subscribeTo Private Channel
+        // ✅ CRITICAL: Channel, subscribe, and bind code kept EXACTLY as you requested
         function subscribeToChannel(userId)
         {
             // Unsubscribe from previous channel if exists
@@ -266,38 +328,29 @@
             // (The Listener)
             channel.bind('message.sent', function(data){
                 console.log('Message Received:', data);
-                appendMessage(data);
+                // Appending using the new renderMessage function for consistent UI
+                $('#chat-messages').append(renderMessage(data));
                 scrollToBottom();
             });
-        }
-        // 6. HELPER FUNCTIONS
-        function appendMessage(msg) {
-            let isOwnMessage = msg.sender_id == currentUserId;
-            let messageClass = isOwnMessage ? 'own-message' : 'other-message';
-            let alignment = isOwnMessage ? 'text-end' : 'text-start';
-            let bgColor = isOwnMessage ? 'bg-primary text-white' : 'bg-light';
-
-            let html = `
-                <div class="mb-3 ${alignment}">
-                    <div class="d-inline-block p-3 rounded ${bgColor}" style="max-width: 70%;">
-                        <div class="small fw-bold mb-1">
-                            ${isOwnMessage ? 'You' : (msg.sender_name || 'Unknown')} 
-                        </div>
-                        <div>${msg.message}</div>
-                        <div class="small mt-1 opacity-75">
-                            ${new Date(msg.created_at).toLocaleTimeString()}
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            $('#chat-messages').append(html);
         }
          
         function scrollToBottom() {
             let chatBox = document.getElementById('chat-messages');
             chatBox.scrollTop = chatBox.scrollHeight;
         }
-});
+
+        // ✅ 6. Search Users Logic
+        $('#user-search').on('input', function() {
+            let query = $(this).val().toLowerCase();
+            $('.user-item').each(function() {
+                let name = $(this).data('user-name').toLowerCase();
+                if (name.includes(query)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+    });
 </script>
 @endsection

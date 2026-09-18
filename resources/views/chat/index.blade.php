@@ -8,8 +8,8 @@
 {{-- ✅ 1. Pure Flexbox Wrapper with mx-n4 mt-n4 to break out of Velzon page-content padding --}}
 <div class="chat-wrapper d-lg-flex gap-1 mx-n4 mt-n5 mb-n3 p-0" style="height: calc(100vh - 145px);">
     {{-- ===== LEFT SIDEBAR (Users List) ===== --}}
-    <div class="chat-leftsidebar minimal-border" style="width: 320px; border-right: 1px solid #eff2f7; background: #fff;">
-        <div class="px-4 pt-4 mb-3">
+    <div class="chat-leftsidebar minimal-border ms-3" style="width: 320px; border-right: 1px solid #eff2f7; background: #fff;">
+        <div class="px-4 pt-4 mb-3 ">
             <h5 class="mb-4">Chats</h5>
             {{-- ✅ 6. Search box added as requested --}}
             <div class="search-box">
@@ -181,6 +181,16 @@
         let selectedUserId = null;
         let pusher = null;
         let channel = null;
+        // ✅ XSS Protection Helper Function
+        function escapeHtml(text) {
+            if (!text) return text;
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         // Pusher Initialization (Reverb ke liye Best & Direct Approach)
         pusher = new Pusher('{{ env("REVERB_APP_KEY") }}', // App key seedha Reverb se
@@ -202,20 +212,25 @@
         });
 
         // ✅ 3. Adopted renderMessage function for professional left/right bubbles
+        
         function renderMessage(msg) {
             let isOwnMessage = msg.sender_id == currentUserId;
-            let senderName = isOwnMessage ? 'You' : (msg.sender_name || 'Unknown');
+            
+            // ✅ CRITICAL FIX: Dono sources (AJAX aur Pusher) se naam safely nikalna
+            let rawSenderName = msg.sender_name || (msg.sender ? msg.sender.name : 'Unknown');
+            
+            let senderName = isOwnMessage ? 'You' : rawSenderName;
             let bgColor = isOwnMessage ? 'bg-primary text-white' : 'bg-light text-dark';
-
+        
             return `
                 <li class="chat-list ${isOwnMessage ? 'right' : 'left'} mb-3">
                     <div class="conversation-list">
-                        ${!isOwnMessage ? `<div class="chat-avatar me-2 align-self-end"><img src="https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=random&color=fff" class="rounded-circle avatar-xs" alt=""></div>` : ''}
+                        ${!isOwnMessage ? `<div class="chat-avatar me-2 align-self-start"><img src="https://ui-avatars.com/api/?name=${encodeURIComponent(rawSenderName)}&background=random&color=fff" class="rounded-circle avatar-xs" alt=""></div>` : ''}
                         <div class="user-chat-content">
                             <div class="ctext-wrap">
                                 <div class="ctext-wrap-content px-3 py-2 ${bgColor}" style="border-radius:12px; max-width:420px; word-break:break-word;">
-                                    ${!isOwnMessage ? `<small class="fw-bold d-block mb-1">${senderName}</small>` : ''}
-                                    <p class="mb-0 ctext-content">${msg.message}</p>
+                                    ${!isOwnMessage ? `<small class="fw-bold d-block mb-1">${escapeHtml(rawSenderName)}</small>` : ''}
+                                    <p class="mb-0 ctext-content">${escapeHtml(msg.message)}</p>
                                     <div class="d-flex align-items-center justify-content-end gap-1 mt-1">
                                         <small class="opacity-75" style="font-size:10px;">${new Date(msg.created_at).toLocaleTimeString()}</small>
                                     </div>
@@ -265,7 +280,7 @@
                     $('#chat-messages').empty();
                     if(messages.length === 0)
                     {
-                        $('#chat-messages').html('<li class="text-center text-muted py-4"><small>No messages yet. Start the conversation!</small></li>');
+                        $('#chat-messages').html('<li class="text-center text-muted py-4"><small> Start the conversation!</small></li>');
                     } else {
                         messages.forEach(function(msg){
                             // Using the adopted renderMessage function

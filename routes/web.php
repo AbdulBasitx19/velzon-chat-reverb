@@ -45,8 +45,9 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/users/{id}/sync-roles', [UserController::class, 'syncUserRoles'])->name('users.sync-roles');
 });
 
-
+Broadcast::routes(['middleware' => ['auth']]);
 Route::middleware(['auth'])->group(function(){
+    
     Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat', [ChatController::class, 'store'])->name('chat.store');
     Route::get('/chat/{userId}/messages', [ChatController::class, 'getMessages'])->name('chat.messages');

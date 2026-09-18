@@ -27,7 +27,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'username',   // ✅ Added
+        'username',   
         'phone_num',
     ];
 
@@ -52,5 +52,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+     public function messages()
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    //  User ki upload ki hui attachments
+    public function attachments()
+    {
+        return $this->hasMany(MessageAttachment::class, 'user_id');
     }
 }

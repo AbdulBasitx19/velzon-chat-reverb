@@ -68,11 +68,29 @@
             <div class="chat-conversation p-3 p-lg-4 flex-grow-1 overflow-auto" id="chat-messages" style="background: #f8f9fa;"> 
                 <!-- Messages will be appended here -->
             </div>
+
+            {{-- ✅ NEW FILE SHARING ADDITION: File Preview Area --}}
+            <div id="file-preview-area" class="px-4 py-2 border-top bg-light d-none">
+                <div class="d-flex flex-wrap gap-2" id="file-preview-container">
+                    <!-- JavaScript yahan dynamically file previews inject karega -->
+                </div>
+                <button id="clear-files" class="btn btn-sm btn-link text-danger p-0 mt-2" type="button">
+                    <i class="ri-close-line"></i> Clear all files
+                </button>
+            </div>
             
             {{-- Chat Footer / Input --}}
             <div class="chat-input-section p-3 border-top bg-white"> 
                 <form id="message-form" class="d-flex align-items-center gap-2">
                     <input type="hidden" id="receiver-id" value=""> 
+                    
+                    {{-- ✅ NEW FILE SHARING ADDITION: Attachment Button & Hidden Input --}}
+                    <label for="file-upload" class="btn btn-ghost-secondary btn-icon p-2" title="Attach file" style="cursor: pointer;">
+                        <i class="ri-attachment-2 fs-20"></i>
+                    </label>
+                    <input type="file" id="file-upload" class="d-none" multiple 
+                           accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.7z">
+                    
                     <input type="text"
                         id="message-input" 
                         class="form-control bg-light border-light" 
@@ -82,6 +100,24 @@
                         <i class="ri-send-plane-2-line"></i> Send
                     </button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ✅ NEW FILE SHARING ADDITION: Video Preview Modal --}}
+<div class="modal fade" id="videoPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-transparent border-0">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-white" id="videoModalTitle">Video Preview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 d-flex justify-content-center">
+                <video id="modalVideoPlayer" class="w-100" style="max-height: 80vh; border-radius: 8px; background: #000;" controls preload="metadata">
+                    <source src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
         </div>
     </div>
@@ -122,7 +158,7 @@
     flex-grow: 1 !important;
 }
 
-.user-chat-topbar, .chat-input-section {
+.user-chat-topbar, .chat-input-section, #file-preview-area {
     flex-shrink: 0 !important; 
 }
 
@@ -169,6 +205,15 @@
 #chat-messages li {
     list-style: none !important;
 }
+
+/* ✅ NEW FILE SHARING ADDITION: Attachment Styles */
+.file-preview-item {
+    width: 60px; height: 60px;
+    position: relative;
+}
+.file-preview-item img {
+    width: 100%; height: 100%; object-fit: cover;
+}
 </style>
 @endsection
 
@@ -181,6 +226,14 @@
         let selectedUserId = null;
         let pusher = null;
         let channel = null;
+        
+        // ✅ NEW FILE SHARING ADDITION: State variables
+        let selectedFiles = [];
+        const fileInput = document.getElementById('file-upload');
+        const previewArea = document.getElementById('file-preview-area');
+        const previewContainer = document.getElementById('file-preview-container');
+        const clearFilesBtn = document.getElementById('clear-files');
+
         // ✅ XSS Protection Helper Function
         function escapeHtml(text) {
             if (!text) return text;
@@ -212,7 +265,6 @@
         });
 
         // ✅ 3. Adopted renderMessage function for professional left/right bubbles
-        
         function renderMessage(msg) {
             let isOwnMessage = msg.sender_id == currentUserId;
             
@@ -223,14 +275,47 @@
             let bgColor = isOwnMessage ? 'bg-primary text-white' : 'bg-light text-dark';
         
             return `
-                <li class="chat-list ${isOwnMessage ? 'right' : 'left'} mb-3">
+                <li class="chat-list ${isOwnMessage ? 'right' : 'left'} mb-3" data-id="${msg.id}">
                     <div class="conversation-list">
                         ${!isOwnMessage ? `<div class="chat-avatar me-2 align-self-start"><img src="https://ui-avatars.com/api/?name=${encodeURIComponent(rawSenderName)}&background=random&color=fff" class="rounded-circle avatar-xs" alt=""></div>` : ''}
                         <div class="user-chat-content">
                             <div class="ctext-wrap">
                                 <div class="ctext-wrap-content px-3 py-2 ${bgColor}" style="border-radius:12px; max-width:420px; word-break:break-word;">
                                     ${!isOwnMessage ? `<small class="fw-bold d-block mb-1">${escapeHtml(rawSenderName)}</small>` : ''}
-                                    <p class="mb-0 ctext-content">${escapeHtml(msg.message)}</p>
+                                    <p class="mb-0 ctext-content">${escapeHtml(msg.message || '')}</p>
+                                    
+                                    {{-- ✅ NEW FILE SHARING ADDITION: Attachment Rendering Logic --}}
+                                    ${msg.attachments && msg.attachments.length > 0 ? `
+                                    <div class="mt-2 d-flex flex-column gap-2">
+                                        ${msg.attachments.map(att => {
+                                            const sizeMB = (att.file_size / (1024 * 1024)).toFixed(2);
+                                            if (att.file_category === 'image') {
+                                                return `<div class="position-relative" style="max-width: 250px;">
+                                                    <img src="/storage/${att.file_path}" class="img-fluid rounded border" style="cursor: pointer;" onclick="window.open('/storage/${att.file_path}', '_blank')">
+                                                    <a href="/chat/download/${att.id}" class="btn btn-sm btn-light position-absolute bottom-0 end-0 m-1" title="Download" download><i class="ri-download-line"></i></a>
+                                                </div>`;
+                                            } else if (att.file_category === 'video') {
+                                                return `<div class="position-relative" style="max-width: 250px;">
+                                                    <div class="video-preview-trigger bg-dark rounded d-flex align-items-center justify-content-center" style="height: 150px; cursor: pointer;" data-video-url="/storage/${att.file_path}" data-video-name="${escapeHtml(att.file_name)}">
+                                                        <i class="ri-play-circle-line text-white" style="font-size: 48px; opacity: 0.8;"></i>
+                                                        <small class="text-white position-absolute bottom-0 end-0 m-2 bg-black bg-opacity-50 px-2 py-1 rounded">${sizeMB} MB</small>
+                                                    </div>
+                                                    <a href="/chat/download/${att.id}" class="btn btn-sm btn-light position-absolute bottom-0 end-0 m-1" title="Download" download style="z-index: 2;"><i class="ri-download-line"></i></a>
+                                                </div>`;
+                                            } else {
+                                                return `<a href="/chat/download/${att.id}" class="d-flex align-items-center gap-2 p-2 rounded border bg-light text-decoration-none text-dark" style="max-width: 250px;" download>
+                                                    <i class="ri-file-text-line text-primary fs-4"></i>
+                                                    <div class="flex-grow-1 overflow-hidden">
+                                                        <div class="text-truncate fw-medium" style="font-size: 13px;">${escapeHtml(att.file_name)}</div>
+                                                        <small class="text-muted" style="font-size: 11px;">${sizeMB} MB</small>
+                                                    </div>
+                                                    <i class="ri-download-cloud-line fs-5 text-muted"></i>
+                                                </a>`;
+                                            }
+                                        }).join('')}
+                                    </div>
+                                    ` : ''}
+                                    
                                     <div class="d-flex align-items-center justify-content-end gap-1 mt-1">
                                         <small class="opacity-75" style="font-size:10px;">${new Date(msg.created_at).toLocaleTimeString()}</small>
                                     </div>
@@ -296,33 +381,62 @@
             });
         }
 
-        // 4. SEND MESSAGE (AJAX POST)
+        // 4. SEND MESSAGE (AJAX POST) - ✅ UPDATED TO HANDLE FILES
         $('#message-form').on('submit', function(e) {
             e.preventDefault();
-            let message = $('#message-input').val().trim(); // value trim ki hy
-            if (message === '') 
-            {
+            let messageText = $('#message-input').val().trim();
+            
+            if (messageText === '' && selectedFiles.length === 0) {
                 return;
             }
-            
-            $.ajax({
-                url: '/chat',
-                method: 'POST',
-                data: 
-                {
-                    message: message,
-                    receiver_id : selectedUserId,
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function(response){
-                    $('#message-input').val('');
-                    // Message already appended by real-time event
-                    // (No need to append here to avoid duplication)
-                },
-                error: function(xhr) {
-                    Swal.fire("Error!", xhr.responseJSON?.message || "Failed to send message", "error");
-                }
-            });
+
+            if (selectedFiles.length > 0) {
+                // ✅ File Upload Logic
+                let formData = new FormData();
+                formData.append('receiver_id', selectedUserId);
+                if (messageText) formData.append('message', messageText);
+                
+                selectedFiles.forEach((file, index) => {
+                    formData.append(`files[${index}]`, file);
+                });
+
+                $.ajax({
+                    url: '/chat/send-file',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    success: function(response){
+                        $('#message-input').val('');
+                        selectedFiles = [];
+                        previewContainer.innerHTML = '';
+                        previewArea.classList.add('d-none');
+                        // Real-time event will handle appending
+                    },
+                    error: function(xhr) {
+                        Swal.fire("Error!", xhr.responseJSON?.message || "Failed to send file", "error");
+                    }
+                });
+            } else {
+                // ✅ Existing Text-Only Logic (Preserved Exactly)
+                $.ajax({
+                    url: '/chat',
+                    method: 'POST',
+                    data: {
+                        message: messageText,
+                        receiver_id : selectedUserId,
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response){
+                        $('#message-input').val('');
+                        // Message already appended by real-time event
+                    },
+                    error: function(xhr) {
+                        Swal.fire("Error!", xhr.responseJSON?.message || "Failed to send message", "error");
+                    }
+                });
+            }
         });
 
         //subscribeTo Private Channel
@@ -340,10 +454,17 @@
 
             //Subscribe to Private channel 
             channel = pusher.subscribe(channelName);
-            // (The Listener)
+            
+            // (The Listener for Text)
             channel.bind('message.sent', function(data){
                 console.log('Message Received:', data);
-                // Appending using the new renderMessage function for consistent UI
+                $('#chat-messages').append(renderMessage(data));
+                scrollToBottom();
+            });
+
+            // ✅ NEW FILE SHARING ADDITION: (The Listener for Files)
+            channel.bind('file.sent', function(data){
+                console.log('File Received:', data);
                 $('#chat-messages').append(renderMessage(data));
                 scrollToBottom();
             });
@@ -366,6 +487,65 @@
                 }
             });
         });
+
+        // ✅ NEW FILE SHARING ADDITION: File Input & Preview Logic
+        fileInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            if (selectedFiles.length + files.length > 5) {
+                alert('You can only select 5 files at a single time.');
+                fileInput.value = '';
+                return;
+            }
+
+            files.forEach(file => {
+                selectedFiles.push(file);
+                let previewHtml = '';
+                
+                if (file.type.startsWith('image/')) {
+                    const imgUrl = URL.createObjectURL(file);
+                    previewHtml = `<div class="file-preview-item"><img src="${imgUrl}" class="rounded"></div>`;
+                } else {
+                    const iconClass = file.type.startsWith('video/') ? 'ri-movie-line text-danger' : 'ri-file-text-line text-primary';
+                    previewHtml = `<div class="d-flex align-items-center justify-content-center bg-light rounded border file-preview-item"><i class="${iconClass} fs-3"></i></div>`;
+                }
+
+                const div = document.createElement('div');
+                div.className = 'position-relative';
+                div.innerHTML = previewHtml;
+                previewContainer.appendChild(div);
+            });
+
+            previewArea.classList.remove('d-none');
+            fileInput.value = '';
+        });
+
+        clearFilesBtn.addEventListener('click', function() {
+            selectedFiles = [];
+            previewContainer.innerHTML = '';
+            previewArea.classList.add('d-none');
+        });
+
+        // ✅ NEW FILE SHARING ADDITION: Video Modal Logic
+        const videoModalEl = document.getElementById('videoPreviewModal');
+        const videoModal = new bootstrap.Modal(videoModalEl);
+        const modalVideoPlayer = document.getElementById('modalVideoPlayer');
+        const videoModalTitle = document.getElementById('videoModalTitle');
+
+        document.getElementById('chat-messages').addEventListener('click', function(e) {
+            const videoTrigger = e.target.closest('.video-preview-trigger');
+            if (videoTrigger) {
+                videoModalTitle.textContent = videoTrigger.dataset.videoName;
+                modalVideoPlayer.src = videoTrigger.dataset.videoUrl;
+                videoModal.show();
+            }
+        });
+
+        videoModalEl.addEventListener('hidden.bs.modal', function () {
+            modalVideoPlayer.pause();
+            modalVideoPlayer.src = "";
+            modalVideoPlayer.load();
+        });
+
     });
 </script>
 @endsection

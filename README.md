@@ -1,27 +1,25 @@
-# 🛡️ Velzon RBAC App - Laravel Role & Permission Management
+# 💬 Velzon Real-Time Chat & RBAC System
 
-A complete, production-ready Role-Based Access Control (RBAC) system built with **Laravel**, **Spatie Laravel Permission**, and the beautiful **Velzon Admin Theme**. 
-
-This project demonstrates a full-stack implementation of user management, role assignment, and granular permission control using AJAX, Yajra DataTables, and Laravel's native authentication.
+A production-ready, real-time chat application built with **Laravel 11**, **Laravel Reverb**, and the beautiful **Velzon Admin Theme**. This project extends a robust Role-Based Access Control (RBAC) foundation with a modern, WhatsApp-like chat interface featuring real-time messaging and seamless file sharing.
 
 ---
 
 ## ✨ Key Features
 
-- 🔐 **Manual Authentication**: Custom Login/Logout logic with secure session handling.
-- 👥 **User Management**: Full CRUD (Create, Read, Update, Delete) for users via AJAX.
-- 🛡️ **Role Management**: Create, edit, and delete roles dynamically.
-- 🔑 **Granular Permissions**: Assign specific permissions to roles using Spatie's `syncPermissions()`.
-- 🔄 **Dynamic Role Assignment**: Assign multiple roles to users on the fly using `syncRoles()`.
-- 📊 **Server-Side DataTables**: Fast, paginated, and searchable tables using Yajra DataTables.
-- 🎨 **Velzon Admin UI**: Fully integrated with the premium Velzon Bootstrap 5 admin template.
-- 🛠️ **Custom Database Schema**: Extended default `users` table with `username` and `phone_num`.
+- 🔐 **Robust RBAC**: Built-in Spatie Laravel Permission for granular role and user management.
+- ⚡ **Real-Time Messaging**: Powered by **Laravel Reverb** (First-party WebSocket server) and **Pusher.js** (CDN, no NPM/Echo required).
+- 📎 **Advanced File Sharing**: Support for Images, Videos, and Documents with intelligent storage routing:
+  - **Public Disk**: Fast, direct browser rendering for Images & Videos.
+  - **Private Disk**: Secure, authorized downloads for sensitive Documents (PDF, DOCX, ZIP, etc.).
+- 🎨 **Modern UI**: Fully responsive Flexbox layout, custom scrollbars, video preview modals, and attachment previews.
+- 🛡️ **Security**: XSS protection, CSRF token validation, and strict channel authorization (`routes/channels.php`).
+- 📊 **DataTables**: Server-side paginated user lists using Yajra DataTables.
 
 ---
 
 ## 📦 IMPORTANT: Download Theme Assets
 
-Due to GitHub's file size limits, the Velzon theme's static assets are hosted externally.
+Due to GitHub's file size limits, the Velzon theme's static assets are not included in this repository.
 
 🔗 **Google Drive Link:** [Velzon Theme Assets](https://drive.google.com/drive/folders/1m_QJfs4-TQ0vzx1bCQw_AeKkJceOPkSG?usp=sharing)
 
@@ -36,74 +34,104 @@ Due to GitHub's file size limits, the Velzon theme's static assets are hosted ex
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/AbdulBasitx19/velzon-rbac-app.git
-cd velzon-rbac-app
+git clone https://github.com/AbdulBasitx19/velzon-chat-reverb.git
+cd velzon-chat-reverbs.
 ```
-### 2. Install Dependencies:
+### 2. Install Dependencies
 ```bash
 composer install
 ```
 
-### 3. Setup Environment
+### 3. Setup Environment:
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
-### 4. Database Setup
+### 4. Database Setup:
 Update your .env file with your database credentials:
-    DB_CONNECTION=mysql
-    DB_DATABASE=velzon_rbac
-    DB_USERNAME=root
-    DB_PASSWORD=
-    SESSION_DRIVER=database
 
-Run migrations to create the tables (including Spatie's custom permission tables):
+DB_CONNECTION=mysql
+DB_DATABASE=velzon_chat
+DB_USERNAME=root
+DB_PASSWORD=
+
+# Reverb / Pusher Configuration
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=your-app-id
+REVERB_APP_KEY=your-app-key
+REVERB_APP_SECRET=your-app-secret
+REVERB_HOST="127.0.0.1"
+REVERB_PORT=8081
+REVERB_SCHEME=http
+
+PUSHER_APP_ID="${REVERB_APP_ID}"
+PUSHER_APP_KEY="${REVERB_APP_KEY}"
+PUSHER_APP_SECRET="${REVERB_APP_SECRET}"
+PUSHER_HOST="${REVERB_HOST}"
+PUSHER_PORT="${REVERB_PORT}"
+PUSHER_SCHEME="${REVERB_SCHEME}"
+PUSHER_APP_CLUSTER=mt1
+
+
+### 5. Run Migrations & Seeders:
+
+# Create tables (users, messages, message_attachments, permissions)
 ```bash
 php artisan migrate
 ```
 
-### 5. Seed Roles & Permissions
+# Seed default roles, permissions, and a Super Admin user
 ```bash
 php artisan db:seed --class=RolePermissionSeeder
+```
+
+### 6. Create Storage Link (Crucial for File Uploads):
+```bash
+php artisan storage:link
 ```
 
 ### 7. Download Assets
 Follow the "Download Theme Assets" instructions above.
 
-### 8. Start the Server
+### 8. Running the Application
+# Terminal 1: HTTP Web Server (Frontend & API)
 ```bash
-php artisan serve
+php artisan serve --port=8000
+```
+# Terminal 2: WebSocket Server (Real-Time Broadcasting)
+```bash
+php artisan reverb:start --port=8081 --debug
 ```
 
-### 📂 Project Structure Highlights
+
+### Project Structure Highlights
 app/
+├── Events/
+│   ├── MessageSent.php          # Broadcasts text messages
+│   └── FileSent.php             # Broadcasts messages with attachments
 ├── Http/Controllers/
-│   ├── LoginController.php          # Handles Auth logic
-│   └── Admin/
-│       ├── RoleController.php       # Handles Roles & Permissions CRUD
-│       └── UserController.php       # Handles Users CRUD & Role Assignment
+│   ├── Admin/
+│   │   ├── RoleController.php   # RBAC Management
+│   │   └── UserController.php   # User Management
+│   └── ChatController.php       # Chat UI, message history, file upload/download
 └── Models/
-    └── User.php                     # Extended with Spatie's HasRoles trait
+    ├── Message.php              # Includes hasMany(attachments) relationship
+    └── MessageAttachment.php    # Handles file metadata and storage paths
 
 database/
-├── migrations/
-│   ├── ..._create_users_table.php   # Customized with username & phone_num
-│   └── ..._create_permission_tables.php # Spatie's migration with custom columns
-└── seeders/
-    └── RolePermissionSeeder.php     # Seeds default roles, permissions, and admin user
+└── migrations/
+    ├── ..._create_messages_table.php
+    └── ..._create_message_attachments_table.php
 
 resources/views/
-├── auth/                            # Login UI
-├── layouts/                         # Master layout, Sidebar, Topbar
-└── users/
-    ├── role.blade.php               # Role Management UI (DataTables + Modals)
-    └── index.blade.php              # User Management UI (DataTables + Modals)
+└── chat/
+    └── index.blade.php          # Complete Chat UI with Pusher.js & Vanilla JS
+
 
 ### 📄 License
 This project is built for educational and portfolio purposes. The Velzon theme is subject to its original licensing terms by Themesbrand.
-
-Built with ❤️ using Laravel, Spatie Permission, Yajra DataTables, and clean MVC practices.
+Built with ❤️ using Laravel 11, Reverb, Spatie Permission, and clean MVC practices.
 
 
 
